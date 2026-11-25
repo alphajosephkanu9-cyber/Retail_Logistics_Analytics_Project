@@ -1,0 +1,173 @@
+CREATE RETAIL AND LOGISTICS DATABASE
+------------------------------------------------------------------------------------------------------------------------
+
+CREATE DATABASE Retail_Logistics_DB;
+
+-- Select the newly created database
+USE Retail_Logistics_DB;
+
+
+
+USE Retail_Logistics_DB;
+
+
+CREATE TABLE dbo.Warehouses (
+    WarehouseID VARCHAR(2) NOT NULL PRIMARY KEY,
+    WarehouseName VARCHAR(50),
+    City VARCHAR(50),
+    Country VARCHAR(50),
+    Latitude DECIMAL(9,6),
+    Longitude DECIMAL(9,6),
+    CapacityPallets INT,
+    OpenDate DATE
+);
+
+
+CREATE TABLE dbo.Carriers (
+    CarrierID VARCHAR(3) NOT NULL PRIMARY KEY,
+    CarrierName VARCHAR(50),
+    ServiceLevel VARCHAR(30),
+    RatePerKg DECIMAL(10,2)
+);
+
+
+CREATE TABLE dbo.Stores (
+    StoreID VARCHAR(3) NOT NULL PRIMARY KEY,
+    StoreName VARCHAR(100),
+    City VARCHAR(50),
+    Country VARCHAR(50),
+    Region VARCHAR(50),
+    Latitude DECIMAL(9,6),
+    Longitude DECIMAL(9,6),
+    StoreType VARCHAR(30),
+    OpenDate DATE,
+    SquareMeters INT,
+    WarehouseID VARCHAR(2),
+    CONSTRAINT FK_Stores_Warehouses FOREIGN KEY (WarehouseID)
+        REFERENCES dbo.Warehouses(WarehouseID)
+);
+
+
+CREATE TABLE dbo.Products (
+    ProductID VARCHAR(4) NOT NULL PRIMARY KEY,
+    ProductName VARCHAR(100),
+    Category VARCHAR(50),
+    SubCategory VARCHAR(50),
+    Brand VARCHAR(50),
+    UnitCost DECIMAL(18,2),
+    ListPrice DECIMAL(18,2),
+    SupplierCountry VARCHAR(50),
+    CustomerRating DECIMAL(4,2),
+    WeightKg DECIMAL(10,2)
+);
+
+
+CREATE TABLE dbo.Customers (
+    CustomerID VARCHAR(5) NOT NULL PRIMARY KEY,
+    CustomerName VARCHAR(100),
+    Gender VARCHAR(20),
+    BirthDate DATE,
+    Segment VARCHAR(50),
+    LoyaltyTier VARCHAR(30),
+    AcquisitionSource VARCHAR(50),
+    City VARCHAR(50),
+    Country VARCHAR(50),
+    HomeStoreID VARCHAR(3),
+    SignupDate DATE,
+    CONSTRAINT FK_Customers_Stores FOREIGN KEY (HomeStoreID)
+        REFERENCES dbo.Stores(StoreID)
+);
+
+
+CREATE TABLE dbo.Calendar (
+    [Date] DATE NOT NULL PRIMARY KEY,
+    [Year] INT,
+    QuarterNum INT,
+    Quarter VARCHAR(5),
+    MonthNum INT,
+    MonthName VARCHAR(20),
+    MonthShort VARCHAR(5),
+    YearMonth VARCHAR(7),
+    MonthStart DATE,
+    WeekNum INT,
+    DayOfMonth INT,
+    DayOfWeekNum INT,
+    DayName VARCHAR(20),
+    IsWeekend VARCHAR(3),
+    FiscalYear INT,
+    FiscalQuarter VARCHAR(5)
+);
+
+
+CREATE TABLE dbo.Sales (
+    OrderLineID VARCHAR(7) NOT NULL PRIMARY KEY,
+    OrderID VARCHAR(7),
+    OrderDate DATE,
+    CustomerID VARCHAR(5),
+    ProductID VARCHAR(4),
+    StoreID VARCHAR(3),
+    Channel VARCHAR(30),
+    PaymentMethod VARCHAR(30),
+    Quantity INT,
+    UnitPrice DECIMAL(18,2),
+    UnitCost DECIMAL(18,2),
+    Discount DECIMAL(5,4),
+    SalesAmount DECIMAL(18,2),
+    TotalCost DECIMAL(18,2),
+    Profit DECIMAL(18,2),
+    Product_Name VARCHAR(100),
+    CONSTRAINT FK_Sales_Customers FOREIGN KEY (CustomerID) REFERENCES dbo.Customers(CustomerID),
+    CONSTRAINT FK_Sales_Products FOREIGN KEY (ProductID) REFERENCES dbo.Products(ProductID),
+    CONSTRAINT FK_Sales_Stores FOREIGN KEY (StoreID) REFERENCES dbo.Stores(StoreID)
+);
+
+
+CREATE TABLE dbo.Shipments (
+    ShipmentID VARCHAR(8) NOT NULL PRIMARY KEY,
+    OrderID VARCHAR(7),
+    StoreID VARCHAR(3),
+    WarehouseID VARCHAR(2),
+    CarrierID VARCHAR(3),
+    ShipMode VARCHAR(30),
+    ShipDate DATE,
+    PromisedDate DATE,
+    DeliveryDate DATE,
+    DestinationCity VARCHAR(50),
+    DestinationCountry VARCHAR(50),
+    WeightKg DECIMAL(10,2),
+    ShippingCost DECIMAL(18,2),
+    DeliveryStatus VARCHAR(30),
+    DelayReason VARCHAR(50),
+    CONSTRAINT FK_Shipments_Stores FOREIGN KEY (StoreID) REFERENCES dbo.Stores(StoreID),
+    CONSTRAINT FK_Shipments_Warehouses FOREIGN KEY (WarehouseID) REFERENCES dbo.Warehouses(WarehouseID),
+    CONSTRAINT FK_Shipments_Carriers FOREIGN KEY (CarrierID) REFERENCES dbo.Carriers(CarrierID)
+);
+
+
+CREATE TABLE dbo.Returns (
+    ReturnID VARCHAR(7) NOT NULL PRIMARY KEY,
+    OrderLineID VARCHAR(7),
+    OrderID VARCHAR(7),
+    ReturnDate DATE,
+    CustomerID VARCHAR(5),
+    ProductID VARCHAR(4),
+    StoreID VARCHAR(3),
+    ReturnReason VARCHAR(50),
+    ReturnedQuantity INT,
+    RefundAmount DECIMAL(18,2),
+    ItemCondition VARCHAR(30),
+    CONSTRAINT FK_Returns_Sales FOREIGN KEY (OrderLineID) REFERENCES dbo.Sales(OrderLineID),
+    CONSTRAINT FK_Returns_Customers FOREIGN KEY (CustomerID) REFERENCES dbo.Customers(CustomerID),
+    CONSTRAINT FK_Returns_Products FOREIGN KEY (ProductID) REFERENCES dbo.Products(ProductID),
+    CONSTRAINT FK_Returns_Stores FOREIGN KEY (StoreID) REFERENCES dbo.Stores(StoreID)
+);
+
+CREATE TABLE dbo.SalesTargets (
+    [Month] DATE NOT NULL,
+    StoreID VARCHAR(3) NOT NULL,
+    SalesTarget DECIMAL(18,2),
+    ProfitTarget DECIMAL(18,2),
+    CONSTRAINT PK_SalesTargets PRIMARY KEY ([Month], StoreID),
+    CONSTRAINT FK_SalesTargets_Stores FOREIGN KEY (StoreID) REFERENCES dbo.Stores(StoreID)
+);
+
