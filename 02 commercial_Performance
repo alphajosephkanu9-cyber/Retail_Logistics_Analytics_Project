@@ -1,0 +1,40 @@
+Executive KPİs
+-------------------------------------------------------------------------------------------------------------------------
+SELECT COUNT(*) AS Purchase_details,
+       COUNT(DISTINCT OrderID) AS Total_orders,
+       SUM(Quantity) AS units_sold,
+       ROUND(SUM(SalesAmount),2) AS sales_revenue,
+       ROUND(SUM(TotalCost),2) AS Total_cost,
+       ROUND(SUM(Profit),2) AS gross_profit,
+       ROUND(SUM(Profit)/NULLIF(SUM(SalesAmount),0)*100,2) AS gross_margin_percent,
+       ROUND(SUM(SalesAmount)/NULLIF(COUNT(DISTINCT OrderID),0),2) AS average_order_value,
+       COUNT(DISTINCT CustomerID) AS purchasing_customers,
+       COUNT(DISTINCT ProductID) AS products_sold,
+       COUNT(DISTINCT StoreID) AS selling_stores
+FROM Sales;
+
+Year and month performance
+-------------------------------------------------------------------------------------------------------------------------
+SELECT YEAR(OrderDate) AS sales_year, MONTH(OrderDate) AS month_number,
+       DATE_FORMAT(OrderDate,'%Y-%m') AS year_month,
+       COUNT(DISTINCT OrderID) AS orders, SUM(Quantity) AS units,
+       ROUND(SUM(SalesAmount),2) AS revenue,
+       ROUND(SUM(Profit),2) AS gross_profit
+FROM Sales
+GROUP BY YEAR(OrderDate), MONTH(OrderDate)
+ORDER BY sales_year, month_number;
+
+Revenue/profit by sales channel
+-------------------------------------------------------------------------------------------------------------------------
+SELECT Channel, COUNT(DISTINCT OrderID) AS orders,
+       ROUND(SUM(SalesAmount),2) AS revenue,
+       ROUND(SUM(Profit),2) AS gross_profit,
+       ROUND(SUM(Profit)/NULLIF(SUM(SalesAmount),0)*100,2) AS margin_percent
+FROM Sales GROUP BY Channel ORDER BY revenue DESC;
+
+Payment method performance
+-------------------------------------------------------------------------------------------------------------------------
+SELECT PaymentMethod, COUNT(DISTINCT OrderID) AS orders,
+       ROUND(SUM(SalesAmount),2) AS revenue,
+       ROUND(SUM(SalesAmount)/NULLIF(COUNT(DISTINCT OrderID),0),2) AS average_order_value
+FROM Sales GROUP BY PaymentMethod ORDER BY revenue DESC;
