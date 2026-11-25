@@ -1,0 +1,43 @@
+Return rate by reason (counts and refund value)
+---------------------------------------------------------------------------------------------------------------
+SELECT ReturnReason,ItemCondition,COUNT(*) AS return_records,
+       SUM(ReturnedQuantity) AS units_returned,
+       ROUND(SUM(RefundAmount),2) AS refund_amount
+FROM Returns GROUP BY ReturnReason,ItemCondition ORDER BY refund_amount DESC;
+
+Category returns compared with sales; aggregate separately to avoid multiplying sales rows.
+---------------------------------------------------------------------------------------------------------------
+WITH sales_category AS (
+ SELECT p.Category,SUM(s.SalesAmount) AS sales_value,SUM(s.Quantity) AS units_sold
+ FROM Sales s JOIN Products p ON s.ProductID=p.ProductID GROUP BY p.Category
+), returns_category AS (
+ SELECT p.Category,COUNT(*) AS return_records,
+        SUM(r.ReturnedQuantity) AS units_returned,SUM(r.RefundAmount) AS refunds
+ FROM Returns r JOIN Products p ON r.ProductID=p.ProductID GROUP BY p.Category
+)
+SELECT s.Category,ROUND(s.sales_value,2) AS sales_value,s.units_sold,
+       COALESCE(r.return_records,0) AS return_records,
+       COALESCE(r.units_returned,0) AS units_returned,
+       ROUND(COALESCE(r.refunds,0),2) AS refunds,
+       ROUND(COALESCE(r.refunds,0)/NULLIF(s.sales_value,0)*100,2) AS refund_to_sales_percent,
+       ROUND(COALESCE(r.units_returned,0)/NULLIF(s.units_sold,0)*100,2) AS returned_units_to_sold_percent
+FROM sales_category s LEFT JOIN returns_category r ON s.Category=r.Category
+ORDER BY refund_to_sales_percent DESC;
+
+Return rate by product and reason for investigation
+---------------------------------------------------------------------------------------------------------------
+SELECT p.ProductName,p.Category,r.ReturnReason,
+       COUNT(*) AS return_records,SUM(r.ReturnedQuantity) AS units_returned,
+       ROUND(SUM(r.RefundAmount),2) AS refunds
+FROM Returns r JOIN Products p ON r.ProductID=p.ProductID
+GROUP BY p.ProductName,p.Category,r.ReturnReason
+ORDER BY return_records DESC;
+
+Return timing: days from order to return
+---------------------------------------------------------------------------------------------------------------
+SELECT r.ReturnReason,
+       ROUND(AVG(DATEDIFF(r.ReturnDate,s.OrderDate)),1) AS average_days_to_return,
+       MIN(DATEDIFF(r.ReturnDate,s.OrderDate)) AS min_days,
+       MAX(DATEDIFF(r.ReturnDate,s.OrderDate)) AS max_days
+FROM Returns r JOIN Sales s ON r.OrderLineID=s.OrderLineID
+GROUP BY r.ReturnReason ORDER BY average_days_to_return;
