@@ -1,0 +1,44 @@
+Category and subcategory Analysis
+------------------------------------------------------------------------------------------------------
+SELECT p.Category,p.SubCategory,
+       SUM(s.Quantity) AS units,
+       COUNT(DISTINCT s.OrderID) AS orders,
+       ROUND(SUM(s.SalesAmount),2) AS revenue,
+       ROUND(SUM(s.Profit),2) AS gross_profit,
+       ROUND(SUM(s.Profit)/NULLIF(SUM(s.SalesAmount),0)*100,2) AS margin_percent
+FROM Sales s JOIN Products p ON s.ProductID=p.ProductID
+GROUP BY p.Category,p.SubCategory ORDER BY revenue DESC;
+
+Top 15 products by revenue
+------------------------------------------------------------------------------------------------------
+SELECT p.ProductID,p.ProductName,p.Brand,p.Category,
+       SUM(s.Quantity) AS units,COUNT(DISTINCT s.OrderID) AS orders,
+       ROUND(SUM(s.SalesAmount),2) AS revenue,ROUND(SUM(s.Profit),2) AS gross_profit
+FROM Sales s JOIN Products p ON s.ProductID=p.ProductID
+GROUP BY p.ProductID,p.ProductName,p.Brand,p.Category
+ORDER BY revenue DESC LIMIT 15;
+
+Product margin and rating view for assortment review
+------------------------------------------------------------------------------------------------------
+SELECT p.ProductID,p.ProductName,p.Brand,p.Category,p.CustomerRating,
+       ROUND(SUM(s.SalesAmount),2) AS revenue,
+       ROUND(SUM(s.Profit),2) AS gross_profit,
+       ROUND(SUM(s.Profit)/NULLIF(SUM(s.SalesAmount),0)*100,2) AS margin_percent
+FROM Products p LEFT JOIN Sales s ON p.ProductID=s.ProductID
+GROUP BY p.ProductID,p.ProductName,p.Brand,p.Category,p.CustomerRating
+ORDER BY gross_profit DESC;
+
+Products in the catalog with no sales
+------------------------------------------------------------------------------------------------------
+SELECT p.ProductID,p.ProductName,p.Category,p.Brand
+FROM Products p LEFT JOIN Sales s ON p.ProductID=s.ProductID
+WHERE s.ProductID IS NULL ORDER BY p.Category,p.ProductName;
+
+Product weight and sales mix for logistics planning
+------------------------------------------------------------------------------------------------------
+SELECT p.Category,COUNT(DISTINCT p.ProductID) AS products,
+       ROUND(AVG(p.WeightKg),2) AS average_product_weight_kg,
+       SUM(s.Quantity) AS units_sold,
+       ROUND(SUM(s.Quantity*p.WeightKg),2) AS estimated_units_weight_kg
+FROM Products p LEFT JOIN Sales s ON p.ProductID=s.ProductID
+GROUP BY p.Category ORDER BY estimated_units_weight_kg DESC;
