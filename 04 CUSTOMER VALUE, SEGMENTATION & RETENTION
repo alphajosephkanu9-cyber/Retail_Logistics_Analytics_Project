@@ -1,0 +1,41 @@
+Customer value and purchase frequency
+----------------------------------------------------------------------------------------------------------
+SELECT c.CustomerID,c.CustomerName,c.Segment,c.LoyaltyTier,c.City,c.Country,
+       COUNT(DISTINCT s.OrderID) AS orders,
+       SUM(s.Quantity) AS units,
+       ROUND(SUM(s.SalesAmount),2) AS revenue,
+       ROUND(SUM(s.Profit),2) AS gross_profit
+FROM Customers c LEFT JOIN Sales s ON c.CustomerID=s.CustomerID
+GROUP BY c.CustomerID,c.CustomerName,c.Segment,c.LoyaltyTier,c.City,c.Country
+ORDER BY revenue DESC;
+
+Segment and loyalty tier performance
+----------------------------------------------------------------------------------------------------------
+SELECT c.Segment,c.LoyaltyTier,COUNT(DISTINCT c.CustomerID) AS customers,
+       COUNT(DISTINCT s.OrderID) AS orders,ROUND(SUM(s.SalesAmount),2) AS revenue,
+       ROUND(SUM(s.SalesAmount)/NULLIF(COUNT(DISTINCT c.CustomerID),0),2)
+         AS revenue_per_customer
+FROM Customers c LEFT JOIN Sales s ON c.CustomerID=s.CustomerID
+GROUP BY c.Segment,c.LoyaltyTier ORDER BY revenue DESC;
+
+New vs returning purchasing customers by order month.
+----------------------------------------------------------------------------------------------------------
+WITH first_order AS (
+ SELECT CustomerID,MIN(OrderDate) AS first_order_date FROM Sales GROUP BY CustomerID
+), monthly_customer AS (
+ SELECT DISTINCT CustomerID,DATE_FORMAT(OrderDate,'%Y-%m-01') AS month_start
+ FROM Sales
+)
+SELECT m.month_start,
+       COUNT(*) AS active_customers,
+       SUM(m.month_start=DATE_FORMAT(f.first_order_date,'%Y-%m-01')) AS new_customers,
+       SUM(m.month_start>DATE_FORMAT(f.first_order_date,'%Y-%m-01')) AS returning_customers
+FROM monthly_customer m JOIN first_order f ON m.CustomerID=f.CustomerID
+GROUP BY m.month_start ORDER BY m.month_start;
+
+Customer acquisition source performance
+----------------------------------------------------------------------------------------------------------
+SELECT c.AcquisitionSource,COUNT(DISTINCT c.CustomerID) AS customers,
+       COUNT(DISTINCT s.OrderID) AS orders,ROUND(SUM(s.SalesAmount),2) AS revenue
+FROM Customers c LEFT JOIN Sales s ON c.CustomerID=s.CustomerID
+GROUP BY c.AcquisitionSource ORDER BY revenue DESC;
