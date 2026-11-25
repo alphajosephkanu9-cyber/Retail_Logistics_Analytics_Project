@@ -1,0 +1,45 @@
+Delivery KPIs
+--------------------------------------------------------------------------------------------------------
+SELECT COUNT(*) AS shipment_records,
+       SUM(DeliveryStatus='Delivered') AS delivered_shipments,
+       SUM(DeliveryStatus='Delivered' AND DeliveryDate<=PromisedDate) AS on_time_delivered,
+       ROUND(100*SUM(DeliveryStatus='Delivered' AND DeliveryDate<=PromisedDate)
+         / NULLIF(SUM(DeliveryStatus='Delivered'),0),2) AS on_time_delivery_percent,
+       ROUND(AVG(CASE WHEN DeliveryStatus='Delivered'
+          THEN DATEDIFF(DeliveryDate,ShipDate) END),2) AS average_transit_days,
+       ROUND(SUM(ShippingCost),2) AS total_shipping_cost,
+       ROUND(AVG(ShippingCost),2) AS average_shipping_cost
+FROM Shipments;
+
+Carrier scorecard
+--------------------------------------------------------------------------------------------------------
+SELECT c.CarrierName,c.ServiceLevel,COUNT(*) AS shipments,
+       SUM(s.DeliveryStatus='Delivered') AS delivered,
+       ROUND(100*SUM(s.DeliveryStatus='Delivered' AND s.DeliveryDate<=s.PromisedDate)
+         / NULLIF(SUM(s.DeliveryStatus='Delivered'),0),2) AS on_time_percent,
+       ROUND(AVG(CASE WHEN s.DeliveryStatus='Delivered'
+          THEN DATEDIFF(s.DeliveryDate,s.ShipDate) END),2) AS average_transit_days,
+       ROUND(AVG(s.ShippingCost),2) AS average_shipping_cost,
+       ROUND(SUM(s.ShippingCost),2) AS total_shipping_cost
+FROM Shipments s JOIN Carriers c ON s.CarrierID=c.CarrierID
+GROUP BY c.CarrierName,c.ServiceLevel ORDER BY on_time_percent DESC;
+
+Late shipments by reason and month
+--------------------------------------------------------------------------------------------------------
+SELECT DATE_FORMAT(ShipDate,'%Y-%m') AS ship_month,DelayReason,
+       COUNT(*) AS shipment_count,
+       ROUND(AVG(DATEDIFF(DeliveryDate,PromisedDate)),2) AS average_days_late
+FROM Shipments
+WHERE DeliveryStatus='Delivered' AND DeliveryDate>PromisedDate
+GROUP BY DATE_FORMAT(ShipDate,'%Y-%m'),DelayReason
+ORDER BY ship_month,shipment_count DESC;
+
+Compare peak-season service performance (Nov/Dec vs other months)
+--------------------------------------------------------------------------------------------------------
+SELECT CASE WHEN MONTH(ShipDate) IN (11,12) THEN 'November-December'
+            ELSE 'Other months' END AS season_group,
+       COUNT(*) AS shipments,
+       ROUND(100*SUM(DeliveryStatus='Delivered' AND DeliveryDate<=PromisedDate) / NULLIF(SUM(DeliveryStatus='Delivered'),0),2) AS on_time_percent,
+       ROUND(AVG(CASE WHEN DeliveryStatus='Delivered'
+          THEN DATEDIFF(DeliveryDate,ShipDate) END),2) AS average_transit_days
+FROM Shipments GROUP BY season_group;
