@@ -1,0 +1,34 @@
+Warehouse operation analysis
+------------------------------------------------------------------------------------------
+SELECT w.WarehouseID,w.WarehouseName,w.Country,
+       COUNT(s.orderid) AS shipments,
+       ROUND(SUM(s.WeightKg),2) AS shipped_weight_kg,
+       ROUND(SUM(s.ShippingCost),2) AS shipping_cost,
+       ROUND(SUM(s.ShippingCost)/NULLIF(SUM(s.WeightKg),0),2) AS cost_per_kg,
+       ROUND(AVG(CASE WHEN s.DeliveryStatus='Delivered'
+          THEN DATEDIFF(s.DeliveryDate,s.ShipDate) END),2) AS average_transit_days,
+       ROUND(100*SUM(s.DeliveryStatus='Delivered' AND s.DeliveryDate<=s.PromisedDate)
+         / NULLIF(SUM(s.DeliveryStatus='Delivered'),0),2) AS on_time_percent
+FROM Warehouses w LEFT JOIN Shipments s ON w.WarehouseID=s.WarehouseID
+GROUP BY w.WarehouseID,w.WarehouseName,w.Country
+ORDER BY shipping_cost DESC;
+
+Shipping cost by carrier and shipping mode
+------------------------------------------------------------------------------------------
+SELECT c.CarrierName,s.ShipMode,COUNT(*) AS shipments,
+       ROUND(SUM(s.WeightKg),2) AS total_weight_kg,
+       ROUND(SUM(s.ShippingCost),2) AS shipping_cost,
+       ROUND(SUM(s.ShippingCost)/NULLIF(SUM(s.WeightKg),0),2) AS cost_per_kg
+FROM Shipments s JOIN Carriers c ON s.CarrierID=c.CarrierID
+GROUP BY c.CarrierName,s.ShipMode ORDER BY cost_per_kg;
+
+Destination country cost and service view
+------------------------------------------------------------------------------------------
+SELECT DestinationCountry,COUNT(*) AS shipments,
+       ROUND(SUM(WeightKg),2) AS weight_kg,
+       ROUND(SUM(ShippingCost),2) AS shipping_cost,
+       ROUND(SUM(ShippingCost)/NULLIF(SUM(WeightKg),0),2) AS cost_per_kg,
+       ROUND(100*SUM(DeliveryStatus='Delivered' AND DeliveryDate<=PromisedDate)
+         / NULLIF(SUM(DeliveryStatus='Delivered'),0),2) AS on_time_percent
+FROM Shipments GROUP BY DestinationCountry ORDER BY shipping_cost DESC;
+
