@@ -1,0 +1,36 @@
+Store performance: sales and profit
+--------------------------------------------------------------------------------------------------------
+SELECT st.StoreID,st.StoreName,st.Region,st.StoreType,st.SquareMeters,
+       COUNT(DISTINCT s.OrderID) AS orders,SUM(s.Quantity) AS units,
+       ROUND(SUM(s.SalesAmount),2) AS revenue,ROUND(SUM(s.Profit),2) AS gross_profit,
+       ROUND(SUM(s.SalesAmount)/NULLIF(st.SquareMeters,0),2) AS revenue_per_square_meter
+FROM Stores st LEFT JOIN Sales s ON st.StoreID=s.StoreID
+GROUP BY st.StoreID,st.StoreName,st.Region,st.StoreType,st.SquareMeters
+ORDER BY revenue DESC;
+
+Compare store-month actuals with targets.
+--------------------------------------------------------------------------------------------------------
+WITH actual AS (
+ SELECT StoreID,DATE_FORMAT(OrderDate,'%Y-%m-01') AS month_start,
+        SUM(SalesAmount) AS actual_sales,SUM(Profit) AS actual_profit
+ FROM Sales GROUP BY StoreID,DATE_FORMAT(OrderDate,'%Y-%m-01')
+), targets AS (
+ SELECT StoreID,DATE_FORMAT(Month,'%Y-%m-01') AS month_start,
+        SUM(SalesTarget) AS sales_target,SUM(ProfitTarget) AS profit_target
+ FROM Sales_Target GROUP BY StoreID,DATE_FORMAT(Month,'%Y-%m-01')
+)
+SELECT t.StoreID,t.month_start,COALESCE(a.actual_sales,0) AS actual_sales,t.sales_target,
+       ROUND(COALESCE(a.actual_sales,0)/NULLIF(t.sales_target,0)*100,2) AS sales_target_achievement_percent,
+       COALESCE(a.actual_profit,0) AS actual_profit,t.profit_target,
+       ROUND(COALESCE(a.actual_profit,0)/NULLIF(t.profit_target,0)*100,2) AS profit_target_achievement_percent
+FROM targets t LEFT JOIN actual a
+ ON t.StoreID=a.StoreID AND t.month_start=a.month_start
+ORDER BY t.month_start,t.StoreID;
+
+Region/store type comparison
+--------------------------------------------------------------------------------------------------------
+SELECT Region,StoreType,COUNT(DISTINCT st.StoreID) AS stores,
+       ROUND(SUM(SalesAmount),2) AS revenue,
+       ROUND(SUM(Profit),2) AS gross_profit
+FROM Sales s JOIN Stores st ON s.StoreID=st.StoreID
+GROUP BY Region,StoreType ORDER BY revenue DESC;
